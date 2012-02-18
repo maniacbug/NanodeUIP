@@ -15,10 +15,12 @@
 
 void nanode_log(char *msg) {
   Serial.println(msg);
+  Serial.flush();
 }
 
 void nanode_log_P(PGM_P msg) {
   printf_P(PSTR("%lu: %S\r\n"),millis(),msg);
+  Serial.flush();
 }
 
 void dhcpc_configured(const struct dhcpc_state *s) {

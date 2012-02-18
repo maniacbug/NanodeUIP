@@ -121,7 +121,9 @@ struct psock {
 			    input buffer. */
   unsigned int bufsize;  /* The size of the input buffer. */
 
-  unsigned char state;   /* The state of the protosocket. */
+  unsigned char state:3;   /* The state of the protosocket. */
+  unsigned char send_P:1;  /* Whether the sendptr points to RAM (0)
+                              or PROGMEM (1) */
 };
 
 void psock_init(struct psock *psock, uint8_t *buffer, unsigned int buffersize);
@@ -177,6 +179,11 @@ PT_THREAD(psock_send(struct psock *psock, const uint8_t *buf, unsigned int len))
  * \hideinitializer
  */
 #define PSOCK_SEND(psock, data, datalen)		\
+    (psock)->send_P = 0; \
+    PT_WAIT_THREAD(&((psock)->pt), psock_send(psock, data, datalen))
+
+#define PSOCK_SEND_P(psock, data, datalen)		\
+    (psock)->send_P = 1; \
     PT_WAIT_THREAD(&((psock)->pt), psock_send(psock, data, datalen))
 
 /**

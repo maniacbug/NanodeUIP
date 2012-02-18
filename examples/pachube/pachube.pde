@@ -1,24 +1,78 @@
-#include <NanodeUNIO.h>
+/*
+ Copyright (C) 2012 J. Coliz <maniacbug@ymail.com>
+
+ This program is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public License
+ version 2 as published by the Free Software Foundation.
+ */
+
+/**
+ * @file pachube.pde 
+ *
+ * This example shows how to use NanodeUIP to upload readings
+ * to Pachube.
+ */
+
+//#define ETHERSHIELD // uncomment to run on EtherShield
 #include <NanodeUIP.h>
 #include <psock.h>
 #include "webclient.h"
 #include "printf.h"
+#ifndef ETHERSHIELD
+#include <NanodeUNIO.h>
+#endif
 
+// To ensure that uip-conf.h is set up correctly to accomodate webclient.
+UIPASSERT(sizeof(struct webclient_state)<=TCP_APP_STATE_SIZE)
+
+// Dear compiler, please be quiet about those uninitalized progmem 
+// warnings.
 #undef PSTR
 #define PSTR(s) (__extension__({static const char __c[] __attribute__ (( section (".progmem") )) = (s); &__c[0];}))
 
-enum app_states_e { state_none = 0, state_needip, state_needresolv, 
-  state_noconnection, state_connecting, state_done, state_invalid };
+/**************************************************************************/
+/**
+ * @defgroup app_logic Application Logic
+ *
+ * The main stuff the sketch does is handled here.
+ *
+ * @{
+ */
 
+/**
+ * All available application states handled by the loop()
+ */
+enum app_states_e
+{
+  state_none = 0, /**< No state has been set. Illegal */
+  state_needip, /**< We are blocked until we get an IP address */
+  state_needresolv, /**< We are blocked until we can resolve the host of our service */
+  state_noconnection, /**< Everything is ready, webclient needs to be started */
+  state_connecting, /**< Trying to connect to server */
+  state_waiting, /**< Ethernet transmission in progress */
+  state_done, /**< Application complete.  Stopped. */ 
+  state_invalid  /**< An invalid state.  Illegal */
+};
+
+/**
+ * The current state the application is in
+ */
 static app_states_e app_state;
 
+/**
+ * Flags related to the application state.  Generally, the application state
+ * will transition when one of these flags changes state.
+ */
 struct app_flags_t
 {
   uint8_t have_ip:1;
   uint8_t have_resolv:1;
 };
 
-static app_flags_t app_flags;
+/**
+ * The current state of the application flags
+ */
+static app_flags_t app_flags = state_needip;
 
 static const char pachube_api_key[] __attribute__ (( section (".progmem") )) = "X-PachubeApiKey: 8pvNK_06BCBDXtRwq96si4ikFtKZn4rtDjmFoejHOG2iTDQpdXnu3jjMoDSk_E5_CRVMtjql79Jbz-4CT9HMR1Bs3LpqsV_sHKzmjuAM00Y574bHA3zGlarGhrmj9cFS";
 
@@ -41,26 +95,55 @@ static void resolv_found(char *name,uint16_t *addr) {
 
 extern uint16_t* __brkval;
 
+// Returns a CSV file, suitable for posting to pachube.
+// In this example, the 'reading' is the current system time adn the free
+// memory.
+static void take_reading(char* buf, size_t len)
+{
+  snprintf_P(buf,len,PSTR("millis,%lu\r\nfree,%u\r\n"),millis(),SP-(uint16_t)__brkval); 
+}
+	
+uint16_t num_samples_remaining;
+struct timer send_sample_timer;
+
 void setup() {
-  char buf[20];
+
+#ifdef ETHERSHIELD // EtherShield
+  byte macaddr[6] = { 0x2, 0x00, 0x00, 0x1, 0x2, 0x3 };
+  uip.init(macaddr,SS);
+#else  // Nanode
   byte macaddr[6];
   NanodeUNIO unio(NANODE_MAC_DEVICE);
+  unio.read(macaddr,NANODE_MAC_ADDRESS,6);
+  uip.init(macaddr);
+#endif
 
   Serial.begin(38400);
   printf_begin();
   printf_P(PSTR(__FILE__"\r\n"));
+  printf_P(PSTR("SP: %04x\r\n"),SP);
   printf_P(PSTR("FREE: %u\r\n"),SP-(uint16_t)__brkval);
-  
-  unio.read(macaddr,NANODE_MAC_ADDRESS,6);
-  uip.init(macaddr);
+
+  char buf[20];
   uip.get_mac_str(buf);
   printf_P(PSTR("MAC: %s\r\n"),buf);
   uip.wait_for_link();
   nanode_log_P(PSTR("Link is up"));
-  printf_P(PSTR("+READY\r\n"));
   uip.start_dhcp(dhcp_status);
   uip.init_resolv(resolv_found);
   app_state = state_needip;
+  
+  // We'll send a sample every so often
+  timer_set(&send_sample_timer, CLOCK_SECOND * 2);
+  
+  printf_P(PSTR("+READY\r\n"));
+  printf_P(PSTR("How many readings to send, or '0' to send lots?\r\n"));
+  while ( !Serial.available() );
+  char c = Serial.read();
+  if ( isdigit(c) && c > '0' )
+    num_samples_remaining = c - '0';
+  else
+    num_samples_remaining = -1;
 }
 
 void loop() {
@@ -80,6 +163,7 @@ void loop() {
       if ( app_flags.have_resolv )
       {
 	app_state = state_noconnection;
+	timer_restart(&send_sample_timer);
       }
       break;
     case state_noconnection:
@@ -88,16 +172,23 @@ void loop() {
 	nanode_log_P(PSTR("Starting pachube put..."));
 	webclient_init();
 
-	// Log the current app time and free memory
-	char put_values[25];
-	snprintf_P(put_values,sizeof(put_values),PSTR("1,%lu\r\n2,%u\r\n"),millis(),SP-(uint16_t)__brkval); 
-	webclient_put_P(PSTR("api.pachube.com"), 80, PSTR("/v2/feeds/33735.csv"), pachube_api_key, put_values);
+	// Send a 'reading' 
+	char reading_buffer[40];
+	take_reading(reading_buffer,sizeof(reading_buffer));
+	webclient_put_P(PSTR("api.pachube.com"), 80, PSTR("/v2/feeds/45037.csv"), pachube_api_key, reading_buffer);
 	app_state = state_connecting;
       }
       break;
     case state_done:
       printf_P(PSTR("+OK\r\n"));
       app_state = state_none;
+      break;
+    case state_waiting:
+      if ( timer_expired(&send_sample_timer) )
+      {
+	app_state = state_noconnection;
+	timer_reset(&send_sample_timer);
+      }
       break;
     case state_connecting:
     case state_none:
@@ -111,25 +202,8 @@ uint32_t size_received = 0;
 uint32_t started_at = 0;
 
 /****************************************************************************/
-/**
- * Callback function that is called from the webclient code when HTTP
- * data has been received.
- *
- * This function must be implemented by the module that uses the
- * webclient code. The function is called from the webclient module
- * when HTTP data has been received. The function is not called when
- * HTTP headers are received, only for the actual data.
- *
- * \note This function is called many times, repetedly, when data is
- * being received, and not once when all data has been received.
- *
- * \param data A pointer to the data that has been received.
- * \param len The length of the data that has been received.
- */
 void webclient_datahandler(char *data, u16_t len)
 {
-  //printf_P(PSTR("%lu: webclient_datahandler data=%p len=%u\r\n"),millis(),data,len);
-
   if ( len )
   {
     if ( ! started_at )
@@ -158,31 +232,20 @@ void webclient_datahandler(char *data, u16_t len)
     printf_P(PSTR("%lu: DONE. Received %lu bytes in %lu msec.\r\n"),millis(),size_received,millis()-started_at);
     size_received = 0;
     started_at = 0;
-    app_state = state_done;
+    if ( --num_samples_remaining )
+      app_state = state_waiting;
+    else
+      app_state = state_done;
   }
 }
 
 /****************************************************************************/
-/**
- * Callback function that is called from the webclient code when the
- * HTTP connection has been connected to the web server.
- *
- * This function must be implemented by the module that uses the
- * webclient code.
- */
 void webclient_connected(void)
 {
   uip_log_P(PSTR("webclient_connected"));
 }
 
 /****************************************************************************/
-/**
- * Callback function that is called from the webclient code if the
- * HTTP connection to the web server has timed out.
- *
- * This function must be implemented by the module that uses the
- * webclient code.
- */
 void webclient_timedout(void)
 {
   uip_log_P(PSTR("webclient_timedout\r\n"));
@@ -190,14 +253,6 @@ void webclient_timedout(void)
 }
 
 /****************************************************************************/
-/**
- * Callback function that is called from the webclient code if the
- * HTTP connection to the web server has been aborted by the web
- * server.
- *
- * This function must be implemented by the module that uses the
- * webclient code.
- */
 void webclient_aborted(void)
 {
   uip_log_P(PSTR("webclient_aborted\r\n"));
@@ -205,13 +260,6 @@ void webclient_aborted(void)
 }
 
 /****************************************************************************/
-/**
- * Callback function that is called from the webclient code when the
- * HTTP connection to the web server has been closed.
- *
- * This function must be implemented by the module that uses the
- * webclient code.
- */
 void webclient_closed(void)
 {
   uip_log_P(PSTR("webclient_closed\r\n"));

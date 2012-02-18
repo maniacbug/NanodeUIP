@@ -21,7 +21,7 @@ sub stringify {
       $datan =~ s/\\01/\01/g;      
       $datan =~ s/\\0/\0/g;
       
-      printf(OUTPUTC "const prog_char $var\[%d] PROGMEM = \n", length($datan) + 1);
+      printf(OUTPUTC "const char $var\[%d] PROGMEM = \n", length($datan) + 1);
       printf(OUTPUTC "/* \"$data\" */\n");
       printf(OUTPUTC "{");
       for($j = 0; $j < length($datan); $j++) {
@@ -29,7 +29,7 @@ sub stringify {
       }
       printf(OUTPUTC "0 };\n");
       
-      printf(OUTPUTH "extern const prog_char $var\[%d];\n", length($datan) + 1);
+      printf(OUTPUTH "extern const char $var\[%d];\n", length($datan) + 1);
       
     }
   }

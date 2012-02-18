@@ -1907,6 +1907,7 @@ uip_htons(u16_t val)
   return UIP_HTONS(val);
 }
 /*---------------------------------------------------------------------------*/
+
 void
 uip_send(const void *data, int len)
 {
@@ -1914,6 +1915,16 @@ uip_send(const void *data, int len)
     uip_slen = len;
     if(data != uip_sappdata) {
       memcpy(uip_sappdata, (data), uip_slen);
+    }
+  }
+}
+void
+uip_send_P(const void *data, int len)
+{
+  if(len > 0) {
+    uip_slen = len;
+    if(data != uip_sappdata) {
+      memcpy_P(uip_sappdata, (data), uip_slen);
     }
   }
 }

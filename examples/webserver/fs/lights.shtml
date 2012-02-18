@@ -1,0 +1,15 @@
+%!: /header.html
+</head>
+<body>
+  <div id="lights" data-role="page">
+    <div data-role="header">
+      <h1 id="op">Lights</h1>
+    </div>
+    <div data-role="content">
+%! lights_list
+    </div>
+    <div data-role="footer" class="ui-bar">
+      <a href="/" data-icon="home">Home</a>
+    </div>
+  </div>
+%!: /footer.html

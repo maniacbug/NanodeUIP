@@ -1,0 +1,35 @@
+%!: /header.html
+<script src="/index.js" type="text/javascript"></script>
+<style type="text/css">div.ui-block-b { text-align:right; }</style>
+</head>
+<body>
+  <div id="credits" data-role="page">
+    <div data-role="header">
+      <h1>Credits</h1>
+    </div>
+    <div data-role="content">
+      <ul data-role="listview" data-theme="g">
+        <li><a href="http://www.sics.se/~adam/">
+		<h3>Adam Dunkels - uIP TCP/IP Stack</h3>
+		<p>Now part of the Contiki OS.</p>
+	</a></li>
+        <li><a href="http://linuxfocus.org/~katja/electronics/200606/article06061.shtml">
+		<h3>Guido Socher - ENC28J60 Drivers</h3>
+		<p>Original network drivers used everywhere today.</p>
+	</a></li>
+        <li><a href="http://www.github.com/sde1000/NanodeUIP/">
+		<h3>Stephen Early - NanodeUIP</h3>
+		<p>Ported uIP to Arduino IDE &amp; good stuff for Nanode.</p>
+	</a></li>
+        <li><a href="http://maniacbug.wordpress.com/">
+		<h3>maniacbug - Web Server</h3>
+		<p>Created this example, and many others.</p>
+		<p>Visit my blog to see more projects!</p>
+	</a></li>
+      </ul>
+    </div>
+    <div data-role="footer" class="ui-bar">
+      <a href="/" data-icon="home">Home</a>
+    </div>
+  </div>
+%!: /footer.html

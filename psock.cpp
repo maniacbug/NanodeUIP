@@ -148,9 +148,15 @@ data_is_sent_and_acked(register struct psock *s)
      data. */
   if(s->state != STATE_DATA_SENT || uip_rexmit()) {
     if(s->sendlen > uip_mss()) {
-      uip_send(s->sendptr, uip_mss());
+      if(s->send_P)
+        uip_send_P(s->sendptr, uip_mss());
+      else
+        uip_send(s->sendptr, uip_mss());
     } else {
-      uip_send(s->sendptr, s->sendlen);
+      if(s->send_P)
+        uip_send_P(s->sendptr, s->sendlen);
+      else
+        uip_send(s->sendptr, s->sendlen);
     }
     s->state = STATE_DATA_SENT;
     return 0;
@@ -197,6 +203,7 @@ PT_THREAD(psock_send(register struct psock *s, const uint8_t *buf,
   }
 
   s->state = STATE_NONE;
+  s->send_P = 0;
 
   PT_END(&s->psockpt);
 }

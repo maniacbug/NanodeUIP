@@ -50,16 +50,17 @@
 #include "webclient-strings.h"
 #include "uipopt.h"
 
-#define WEBCLIENT_CONF_MAX_URLLEN 100
+#define WEBCLIENT_CONF_MAX_URLLEN 32
 
 struct webclient_state {
   u8_t timer;
   u8_t state:2;
   u8_t httpflag:2;
   u8_t request_type:2;
+  u8_t progmem:1;   // whether the extra headers are in progmem
 
   u16_t port;
-  char host[40];
+  char host[32];
   char file[WEBCLIENT_CONF_MAX_URLLEN];
   u16_t getrequestptr;
   u16_t getrequestleft;
@@ -170,8 +171,9 @@ void webclient_init(void);
  * \retval 1 if the connection was initiated.
  */
 unsigned char webclient_get(const char *host, u16_t port, const char *file);
-unsigned char webclient_get_P(const prog_char *host, u16_t port, const prog_char *file);
-unsigned char webclient_put_P(const prog_char *host, u16_t port, const prog_char *file, const prog_char* extra_headers, const char* body );
+unsigned char webclient_get_P(const char *host, u16_t port, const char *file);
+unsigned char webclient_put_P(const char *host, u16_t port, const char *file, const char* extra_headers, const char* body );
+unsigned char webclient_post(const char *host, u16_t port, const char *file, const char* extra_headers, const char* body );
 
 /**
  * Close the currently open HTTP connection.
