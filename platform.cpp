@@ -1,6 +1,6 @@
 #include <avr/pgmspace.h>
 #include "clock.h"
-#include "uip-conf.h"
+#include <uip-conf.h>
 
 #if ARDUINO >= 100
   #include <Arduino.h> // Arduino 1.0

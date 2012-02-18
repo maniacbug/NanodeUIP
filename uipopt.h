@@ -68,7 +68,7 @@
 #endif /* UIP_BIG_ENDIAN */
 
 #include <avr/pgmspace.h>
-#include "uip-conf.h"
+#include <uip-conf.h>
 
 /*------------------------------------------------------------------------------*/
 
