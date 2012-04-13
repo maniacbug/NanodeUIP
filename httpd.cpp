@@ -91,8 +91,8 @@ generate_part_of_file(void *state)
 {
   struct httpd_state *s = (struct httpd_state *)state;
 
-  if(s->file.len > uip_mss()) {
-    s->len = uip_mss();
+  if(s->file.len > (int)uip_mss()) {
+    s->len = (int)uip_mss();
   } else {
     s->len = s->file.len;
   }
@@ -172,8 +172,8 @@ PT_THREAD(handle_script(struct httpd_state *s))
       /* See if we find the start of script marker in the block of HTML
 	 to be sent. */
 
-      if(s->file.len > uip_mss()) {
-	s->len = uip_mss();
+      if(s->file.len > (int)uip_mss()) {
+	s->len = (int)uip_mss();
       } else {
 	s->len = s->file.len;
       }
@@ -186,8 +186,8 @@ PT_THREAD(handle_script(struct httpd_state *s))
       if(ptr != NULL &&
 	 ptr != s->file.data) {
 	s->len = (int)(ptr - s->file.data);
-	if(s->len >= uip_mss()) {
-	  s->len = uip_mss();
+	if(s->len >= (int)uip_mss()) {
+	  s->len = (int)uip_mss();
 	}
       }
       PT_WAIT_THREAD(&s->scriptpt, send_part_of_file(s));
