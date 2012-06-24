@@ -219,7 +219,7 @@ uint32_t started_at = 0;
 void webclient_datahandler(char *data, u16_t len)
 {
   //printf_P(PSTR("%lu: webclient_datahandler data=%p len=%u\r\n"),millis(),data,len);
-  Serial.print('.');
+  Serial.print('+');
 
   if ( ! app_flags.is_receiving )
   {
@@ -243,6 +243,7 @@ void webclient_datahandler(char *data, u16_t len)
   // Send data to the player.  The only data we get is music data so this is
   // safe.
   player.playChunk(reinterpret_cast<uint8_t*>(data),len);
+  Serial.print('-');
 
   // If data is NULL, we are done.  Print the stats
   if (!data)
