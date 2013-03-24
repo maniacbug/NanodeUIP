@@ -30,8 +30,9 @@ static uint8_t enc28j60ControlCs = DEFAULT_ENC28J60_CONTROL_CS;
 // Enable ENC28J60 after disabling interupts
 static void enableChip() {
     cli();
+    PORTB &= ~(1<<0);
 //#ifdef USE_RF12
-    digitalWrite(enc28j60ControlCs, LOW);
+//   digitalWrite(enc28j60ControlCs, LOW);
 //#else
 //    PORTB &= ~(1<<2);
 //#endif
@@ -40,10 +41,11 @@ static void enableChip() {
 // Disable ENC28J60 then enable interupts
 static void disableChip() {
 //#ifdef USE_RF12
-    digitalWrite(enc28j60ControlCs, HIGH);
+//    digitalWrite(enc28j60ControlCs, HIGH);
 //#else
 //    PORTB |= (1<<2);
 //#endif
+    PORTB |= (1<<0);
     sei();
 }
 
@@ -201,12 +203,12 @@ void enc28j60SpiInit() {
        	digitalWrite(SPI_MOSI, LOW);
 	digitalWrite(SPI_SCK, LOW);
 	
-#ifdef USE_RF12
-        // use clk/8 (2x 1/16th) to avoid exceeding RF12's SPI specs of 2.5 MHz when both are used together
-        SPCR = _BV(SPE) | _BV(MSTR);
-#else
-        SPCR = _BV(SPE) | _BV(MSTR) | _BV(SPR0);
-#endif
+// #ifdef USE_RF12
+//         // use clk/8 (2x 1/16th) to avoid exceeding RF12's SPI specs of 2.5 MHz when both are used together
+//         SPCR = _BV(SPE) | _BV(MSTR);
+// #else
+        SPCR = _BV(SPE) | _BV(MSTR);  /* | _BV(SPR0); */
+// #endif
         SPSR |= _BV(SPI2X);
 }
 
