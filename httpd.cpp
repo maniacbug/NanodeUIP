@@ -120,7 +120,9 @@ PT_THREAD(send_part_of_file(struct httpd_state *s))
 {
   PSOCK_BEGIN(&s->sout);
 
+#if UIP_LOGGING == 1
   printf_P(PSTR("send part %p %u\r\n"),(s->file.data), s->len );
+#endif
 
   PSOCK_SEND_P(&s->sout, reinterpret_cast<uint8_t*>(s->file.data), s->len);
   
@@ -132,7 +134,9 @@ next_scriptstate(struct httpd_state *s)
 {
   char *p;
   p = (char*)strchrnul_P(s->scriptptr, ISO_nl) + 1;
+#if UIP_LOGGING == 1
   printf_P(PSTR("Script state ptr=%p p=%p\r\n"),s->scriptptr,p);
+#endif
   s->scriptlen -= (unsigned short)(p - s->scriptptr);
   s->scriptptr = p;
 }
