@@ -13,12 +13,12 @@
 #undef PSTR
 #define PSTR(s) (__extension__({static const char __c[] __attribute__ (( section (".progmem") )) = (s); &__c[0];}))
 
-void nanode_log(char *msg) {
+void __attribute__((weak)) nanode_log(char *msg) {
   Serial.println(msg);
   Serial.flush();
 }
 
-void nanode_log_P(PGM_P msg) {
+void __attribute__((weak)) nanode_log_P(PGM_P msg) {
   printf_P(PSTR("%lu: %S\r\n"),millis(),msg);
   Serial.flush();
 }
